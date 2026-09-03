@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Convierte ChatGPT en el centro de tu trabajo: un agente con memoria, voz, automatizaciones y tus herramientas conectadas.">
+  <title>Efe — Tu agente sobre ChatGPT</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030509;
+      --panel: rgba(10, 17, 30, .72);
+      --line: rgba(104, 192, 255, .16);
+      --blue: #38b6ff;
+      --cyan: #79e7ff;
+      --ink: #f3f8ff;
+      --muted: #98a9bd;
+      --radius: 24px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background:
+        radial-gradient(circle at 72% 12%, rgba(23, 122, 255, .18), transparent 25%),
+        radial-gradient(circle at 20% 60%, rgba(0, 218, 255, .08), transparent 29%),
+        linear-gradient(180deg, #050912 0%, #020408 45%, #060911 100%);
+    }
+    .grid {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      opacity: .2;
+      background-image:
+        linear-gradient(rgba(56,182,255,.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,182,255,.15) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, #000, transparent 82%);
+      transform: perspective(600px) rotateX(55deg) scale(1.5) translateY(-10%);
+      transform-origin: top center;
+      animation: gridMove 15s linear infinite;
+    }
+    .orb {
+      position: fixed;
+      width: 40vw;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: rgba(0, 149, 255, .13);
+      filter: blur(90px);
+      z-index: -1;
+      pointer-events: none;
+      animation: float 12s ease-in-out infinite alternate;
+    }
+    .orb.one { top: 8%; right: -18%; }
+    .orb.two { bottom: 8%; left: -22%; animation-delay: -5s; }
+    @keyframes gridMove { to { background-position: 0 64px, 64px 0; } }
+    @keyframes float { to { transform: translate3d(-8vw, 6vh, 0) scale(1.16); } }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(56,182,255,0); } }
+    @keyframes sweep { to { transform: translateX(180%); } }
+    @keyframes revealIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+
+    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(3, 5, 9, .68);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(18px);
+    }
+    .nav-inner { height: 72px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: flex; gap: 11px; align-items: center; font-weight: 760; letter-spacing: -.02em; }
+    .brand-mark {
+      width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px;
+      background: linear-gradient(140deg, rgba(56,182,255,.35), rgba(56,182,255,.06));
+      border: 1px solid rgba(121,231,255,.4); box-shadow: 0 0 28px rgba(56,182,255,.22);
+    }
+    .brand-mark span { color: var(--cyan); font-size: 18px; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-link { color:var(--muted); font:inherit; font-size:14px; background:none; border:0; padding:8px 0; cursor:pointer; transition:color .2s; }
+    .nav-link:hover { color:var(--ink); }
+    .button {
+      position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      min-height: 48px; padding: 0 20px; border-radius: 13px; text-decoration: none; font-weight: 720;
+      color: #00101c; background: linear-gradient(120deg, #74ddff, var(--blue)); border: 0;
+      box-shadow: 0 13px 40px rgba(22,135,255,.25); overflow: hidden; transition: transform .2s, box-shadow .2s;
+      cursor: pointer;
+    }
+    .button:hover { transform: translateY(-2px); box-shadow: 0 17px 45px rgba(22,135,255,.34); }
+    .button:focus-visible { outline: 3px solid rgba(121,231,255,.7); outline-offset: 3px; }
+    .button::after { content:""; position:absolute; inset:0; width:45%; transform:translateX(-140%); background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent); animation:sweep 4s ease-in-out infinite; pointer-events:none; }
+    .button.secondary { color: #dbeeff; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.13); box-shadow: none; }
+    .button.small { min-height: 40px; padding: 0 16px; font-size: 14px; }
+
+    .hero { min-height: 760px; padding: 110px 0 76px; display: grid; align-items: center; }
+    .hero-grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 72px; align-items: center; }
+    .eyebrow { display:inline-flex; gap:9px; align-items:center; color:#a7dfff; font-size:13px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; }
+    .dot { width:8px; height:8px; background:#63ddff; border-radius:50%; box-shadow:0 0 0 0 rgba(56,182,255,.5); animation:pulse 2s infinite; }
+    h1 { font-size: clamp(48px, 6.7vw, 86px); line-height: .97; letter-spacing: -.065em; margin: 26px 0; max-width: 800px; }
+    .gradient-text { color: transparent; background: linear-gradient(90deg, #fff 5%, #6edaff 58%, #208cff); -webkit-background-clip: text; background-clip: text; }
+    .hero p { color: #a8b7c9; font-size: clamp(18px, 2vw, 21px); max-width: 660px; margin: 0 0 34px; }
+    .hero-actions { display:flex; flex-wrap:wrap; gap:12px; }
+    .micro { margin-top:22px; color:#70839b; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .micro svg { color:#60d5ff; }
+    .chatgpt-badge { display:inline-flex; align-items:center; gap:9px; margin-bottom:18px; padding:8px 12px; border:1px solid rgba(116,221,255,.22); border-radius:999px; background:rgba(56,182,255,.06); color:#ccefff; font-size:13px; }
+    .chatgpt-badge img { width:18px; height:18px; filter:invert(1); }
+
+    .agent-shell {
+      position:relative; padding:1px; border-radius:28px;
+      background: linear-gradient(140deg, rgba(121,231,255,.6), rgba(56,182,255,.03) 48%, rgba(56,182,255,.3));
+      box-shadow: 0 35px 110px rgba(0,75,160,.28);
+    }
+    .agent { position:relative; overflow:hidden; min-height:520px; padding:25px; border-radius:27px; background:rgba(5,9,16,.94); }
+    .agent::before { content:""; position:absolute; width:270px; height:270px; top:-140px; right:-80px; background:#0078ff; border-radius:50%; filter:blur(80px); opacity:.28; }
+    .agent-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:36px; }
+    .agent-id { display:flex; align-items:center; gap:11px; }
+    .avatar { width:42px; height:42px; border:1px solid rgba(108,219,255,.5); border-radius:13px; display:grid; place-items:center; background:rgba(31,143,255,.13); }
+    .agent-id strong { display:block; font-size:14px; }
+    .agent-id small { color:#78dfff; font-size:11px; }
+    .status { color:#83e9be; font-size:11px; padding:7px 10px; border:1px solid rgba(90,226,167,.2); border-radius:99px; background:rgba(65,220,155,.05); }
+    .chat { display:grid; gap:13px; }
+    .msg { max-width:90%; padding:14px 16px; border-radius:17px; font-size:14px; color:#c4d2e2; background:#0c1421; border:1px solid rgba(255,255,255,.055); }
+    .msg.user { margin-left:auto; background:rgba(31,129,255,.16); border-color:rgba(56,182,255,.23); color:#ebf7ff; }
+    .work { margin-top:15px; padding:16px; border-radius:18px; background:rgba(255,255,255,.022); border:1px solid rgba(108,193,255,.13); }
+    .work-top { display:flex; align-items:center; justify-content:space-between; color:#8192a7; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    .progress { height:4px; background:#0d1724; margin:15px 0 17px; border-radius:5px; overflow:hidden; }
+    .progress span { display:block; width:76%; height:100%; background:linear-gradient(90deg,#197aff,#75e7ff); box-shadow:0 0 16px #38b6ff; }
+    .chips { display:flex; gap:7px; flex-wrap:wrap; }
+    .chip { padding:7px 9px; color:#a8c4da; font-size:10px; border-radius:8px; background:#0a111c; border:1px solid rgba(255,255,255,.07); }
+
+    section { padding: 110px 0; }
+    .section-label { color:var(--blue); text-transform:uppercase; letter-spacing:.15em; font-size:12px; font-weight:750; }
+    h2 { font-size:clamp(38px,5vw,64px); line-height:1.04; letter-spacing:-.05em; margin:18px 0 22px; max-width:780px; }
+    .lead { color:#8fa0b5; font-size:19px; max-width:700px; }
+    .pain-grid, .feature-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:50px; }
+    .card {
+      position:relative; min-height:245px; padding:27px; border:1px solid var(--line); border-radius:var(--radius);
+      background:linear-gradient(150deg,rgba(13,23,39,.76),rgba(5,8,14,.86)); overflow:hidden;
+      transition:transform .25s,border-color .25s,background .25s;
+    }
+    .card:hover { transform:translateY(-5px); border-color:rgba(56,182,255,.38); background:linear-gradient(150deg,rgba(15,34,57,.85),rgba(5,8,14,.9)); }
+    .card::after { content:""; position:absolute; inset:auto -20% -55% 30%; height:160px; background:rgba(15,113,255,.11); filter:blur(45px); }
+    .icon { width:42px; height:42px; display:grid; place-items:center; border-radius:12px; color:#76e2ff; background:rgba(56,182,255,.08); border:1px solid rgba(56,182,255,.19); font-size:19px; }
+    .card h3 { margin:24px 0 10px; font-size:21px; letter-spacing:-.025em; }
+    .card p { color:#8395aa; margin:0; font-size:15px; }
+    .pain .card { min-height:218px; }
+    .pain .card h3 { color:#d8e4ef; }
+    .pain-number { position:absolute; right:22px; top:17px; color:rgba(95,193,255,.25); font-size:32px; font-weight:800; }
+
+    .numbers-head { display:grid; grid-template-columns:1.1fr .9fr; gap:48px; align-items:end; }
+    .source-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:44px; }
+    .source-stat { padding:21px; border:1px solid var(--line); border-radius:18px; background:rgba(8,14,24,.72); }
+    .source-stat strong { display:block; color:#eef8ff; font-size:clamp(25px,3vw,36px); line-height:1; letter-spacing:-.04em; }
+    .source-stat span { display:block; margin-top:9px; color:#8295aa; font-size:13px; }
+    .source-stat small { display:block; margin-top:8px; color:#587088; font-size:11px; }
+    .calculator { display:grid; grid-template-columns:.82fr 1.18fr; gap:18px; margin-top:22px; padding:24px; border:1px solid rgba(83,190,255,.28); border-radius:28px; background:linear-gradient(135deg,rgba(10,27,47,.92),rgba(4,8,14,.95)); box-shadow:0 30px 90px rgba(0,80,165,.15); }
+    .calc-inputs { display:grid; gap:12px; }
+    .calc-field { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:16px; border:1px solid rgba(255,255,255,.07); border-radius:16px; background:rgba(3,8,15,.58); }
+    .calc-field label { color:#a9bbce; font-size:13px; }
+    .calc-field output { color:#77ddff; font-size:14px; font-weight:760; }
+    .calc-field input { grid-column:1 / -1; width:100%; accent-color:var(--blue); }
+    .calc-results { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .result-card { min-height:145px; padding:22px; border-radius:18px; background:rgba(4,11,19,.78); border:1px solid rgba(99,204,255,.13); display:flex; flex-direction:column; justify-content:space-between; }
+    .result-card.main { grid-column:1 / -1; min-height:180px; background:linear-gradient(135deg,rgba(26,107,173,.32),rgba(4,11,19,.8)); border-color:rgba(104,220,255,.35); }
+    .result-card span { color:#8195aa; font-size:12px; text-transform:uppercase; letter-spacing:.1em; }
+    .result-card strong { color:#f4fbff; font-size:clamp(28px,4vw,52px); line-height:1; letter-spacing:-.05em; }
+    .result-card.main strong { color:#75e2ff; font-size:clamp(42px,6vw,72px); }
+    .result-card small { color:#70849a; }
+    .calc-note { grid-column:1 / -1; margin:2px 3px 0; color:#667d95; font-size:12px; }
+    .calc-note a, .sources a { color:#8bdfff; }
+
+    .usecase-tabs { display:flex; flex-wrap:wrap; gap:9px; margin:34px 0 20px; }
+    .usecase-tab { padding:9px 13px; border-radius:999px; border:1px solid rgba(88,190,255,.18); background:rgba(56,182,255,.05); color:#a8c4da; font-size:12px; }
+    .usecase-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; }
+    .usecase-group { padding:25px; border:1px solid var(--line); border-radius:22px; background:linear-gradient(150deg,rgba(12,21,35,.8),rgba(5,9,15,.88)); }
+    .usecase-group h3 { display:flex; align-items:center; gap:10px; margin:0 0 18px; font-size:20px; }
+    .usecase-group h3 span { width:32px; height:32px; display:grid; place-items:center; border-radius:10px; background:rgba(56,182,255,.09); color:#70ddff; font-size:14px; }
+    .task-list { list-style:none; margin:0; padding:0; display:grid; gap:11px; }
+    .task-list li { position:relative; padding-left:18px; color:#8fa2b7; font-size:14px; }
+    .task-list li::before { content:""; position:absolute; left:0; top:.62em; width:6px; height:6px; border-radius:50%; background:#38b6ff; box-shadow:0 0 10px rgba(56,182,255,.65); }
+    .sources { margin-top:19px; color:#5f748b; font-size:11px; }
+
+    .connect {
+      padding:64px; border:1px solid rgba(79,180,255,.2); border-radius:32px;
+      background:linear-gradient(125deg,rgba(10,23,41,.9),rgba(5,8,15,.8)); box-shadow:inset 0 1px rgba(255,255,255,.03);
+    }
+    .connect-copy { max-width:820px; }
+    .connector-stage { margin-top:46px; padding:28px 0; border-top:1px solid rgba(121,231,255,.12); border-bottom:1px solid rgba(121,231,255,.12); overflow:hidden; mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent); }
+    .logo-track { width:max-content; display:flex; animation:marqueeRight 28s linear infinite; }
+    .logo-set { display:flex; gap:14px; padding-right:14px; }
+    .connector-stage:hover .logo-track { animation-play-state:paused; }
+    .connector-logo { flex:0 0 auto; min-width:142px; height:72px; padding:0 17px; display:flex; align-items:center; gap:12px; border-radius:17px; background:rgba(7,13,23,.9); border:1px solid rgba(255,255,255,.1); color:#dceaff; font-size:13px; font-weight:700; box-shadow:0 12px 34px rgba(0,0,0,.24); }
+    .connector-logo img { width:38px; height:38px; padding:6px; object-fit:contain; border-radius:10px; background:#fff; filter:drop-shadow(0 4px 10px rgba(0,0,0,.28)); }
+    .connector-note { margin:22px 0 0; color:#71869e; font-size:13px; text-align:center; }
+    @keyframes marqueeRight { from { transform:translateX(-50%); } to { transform:translateX(0); } }
+
+    .offer-section { position:relative; }
+    .offer-section::before { content:""; position:absolute; inset:8% 0 auto; height:75%; z-index:-1; background:radial-gradient(circle at 50% 35%,rgba(13,120,255,.15),transparent 55%); }
+    .offer-intro { max-width:790px; margin:0 auto 46px; text-align:center; }
+    .offer-intro h2 { margin-left:auto; margin-right:auto; }
+    .offer-intro .lead { margin-left:auto; margin-right:auto; }
+    .offer-grid { display:grid; grid-template-columns:.86fr 1.14fr; gap:18px; align-items:stretch; }
+    .price-panel,.maintenance-panel { padding:36px; border-radius:28px; background:rgba(6,12,21,.88); border:1px solid rgba(83,190,255,.2); }
+    .price-panel { background:linear-gradient(145deg,rgba(15,55,91,.76),rgba(5,10,18,.94)); border-color:rgba(92,208,255,.42); box-shadow:0 30px 95px rgba(0,91,180,.2); }
+    .offer-badge { display:inline-flex; padding:7px 11px; border-radius:999px; background:rgba(56,182,255,.1); border:1px solid rgba(96,212,255,.24); color:#8be5ff; font-size:11px; font-weight:760; letter-spacing:.09em; text-transform:uppercase; }
+    .price-kicker { margin:30px 0 6px; color:#89a0b8; font-size:13px; }
+    .old-price { color:#6f8298; font-size:24px; text-decoration:line-through; text-decoration-thickness:2px; }
+    .price { display:flex; align-items:flex-end; gap:9px; margin:3px 0 10px; }
+    .price strong { color:#78e3ff; font-size:clamp(66px,9vw,100px); line-height:.88; letter-spacing:-.075em; }
+    .price span { color:#92a6ba; margin-bottom:9px; }
+    .price-copy { color:#91a6bb; margin:18px 0 24px; }
+    .monthly { display:flex; align-items:baseline; justify-content:space-between; gap:18px; padding:17px 0; border-top:1px solid rgba(255,255,255,.09); border-bottom:1px solid rgba(255,255,255,.09); }
+    .monthly span { color:#89a0b6; }
+    .monthly strong { color:#eef8ff; font-size:28px; }
+    .monthly small { color:#7790a8; }
+    .purchase-button { width:100%; margin-top:24px; }
+    .stripe-note { margin:11px 0 0; min-height:20px; color:#6f859a; font-size:12px; text-align:center; }
+    .stripe-note.is-active { color:#91ddff; }
+    .maintenance-panel h3 { margin:18px 0 8px; font-size:29px; letter-spacing:-.035em; }
+    .maintenance-panel > p { color:#8599ae; margin:0 0 24px; }
+    .included-list { display:grid; gap:12px; margin:0; padding:0; list-style:none; }
+    .included-list li { display:grid; grid-template-columns:28px 1fr; gap:12px; color:#9cafc1; }
+    .included-list li::before { content:"✓"; width:27px; height:27px; display:grid; place-items:center; border-radius:8px; color:#72e0ff; background:rgba(56,182,255,.08); border:1px solid rgba(56,182,255,.18); }
+    .included-list strong { color:#e3eef7; }
+
+    .onboarding-grid { display:grid; grid-template-columns:.76fr 1.24fr; gap:52px; align-items:start; margin-top:48px; }
+    .time-card { position:sticky; top:104px; padding:34px; border-radius:26px; border:1px solid rgba(85,203,255,.32); background:linear-gradient(145deg,rgba(16,54,87,.62),rgba(5,10,17,.9)); }
+    .time-card strong { display:block; color:#75e1ff; font-size:clamp(68px,9vw,108px); line-height:.9; letter-spacing:-.08em; }
+    .time-card h3 { margin:18px 0 10px; font-size:24px; }
+    .time-card p { color:#879cb0; margin:0; }
+    .journey { display:grid; gap:13px; }
+    .journey-step { display:grid; grid-template-columns:44px 1fr; gap:16px; padding:22px; border:1px solid var(--line); border-radius:19px; background:rgba(7,13,22,.75); }
+    .journey-step > span { width:44px; height:44px; display:grid; place-items:center; border-radius:13px; color:#72dfff; font-size:13px; font-weight:780; background:rgba(56,182,255,.08); border:1px solid rgba(56,182,255,.19); }
+    .journey-step h3 { margin:1px 0 6px; font-size:18px; }
+    .journey-step p { margin:0; color:#8195a9; font-size:14px; }
+    .questions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .question { padding:13px; border-radius:13px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06); color:#a8b9c9; font-size:13px; }
+
+    .cta { padding:120px 0 135px; }
+    .cta-box { position:relative; overflow:hidden; text-align:center; padding:90px 30px; border:1px solid rgba(82,191,255,.27); border-radius:34px; background:linear-gradient(145deg,rgba(12,30,51,.92),rgba(5,8,14,.95)); }
+    .cta-box::before { content:""; position:absolute; width:500px; height:220px; top:-130px; left:calc(50% - 250px); background:#087dff; filter:blur(100px); opacity:.26; }
+    .cta-box h2 { margin:0 auto 19px; }
+    .cta-box p { color:#9aabba; font-size:18px; max-width:600px; margin:0 auto 31px; }
+    footer { border-top:1px solid rgba(255,255,255,.06); padding:30px 0; color:#66788e; font-size:13px; }
+    .footer-inner { display:flex; justify-content:space-between; gap:20px; }
+    .reveal { opacity:1; transform:none; animation:revealIn .75s ease both; }
+
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns:1fr; }
+      .hero { padding-top:75px; }
+      .agent-shell { max-width:620px; }
+      .pain-grid,.feature-grid { grid-template-columns:1fr 1fr; }
+      .connect { padding:42px 28px; }
+      .numbers-head,.calculator { grid-template-columns:1fr; }
+      .usecase-grid { grid-template-columns:1fr 1fr; }
+      .offer-grid,.onboarding-grid { grid-template-columns:1fr; }
+      .time-card { position:static; }
+    }
+    @media (max-width: 620px) {
+      .wrap { width:min(100% - 26px,1180px); }
+      .nav-link { display:none; }
+      .hero { min-height:auto; padding:66px 0 45px; }
+      h1 { font-size:50px; }
+      section { padding:78px 0; }
+      .pain-grid,.feature-grid { grid-template-columns:1fr; }
+      .source-stats,.usecase-grid,.calc-results { grid-template-columns:1fr; }
+      .result-card.main { grid-column:auto; }
+      .calculator { padding:15px; }
+      .price-panel,.maintenance-panel { padding:26px 20px; }
+      .questions { grid-template-columns:1fr; }
+      .card { min-height:210px; }
+      .agent { padding:18px; min-height:485px; }
+      .connect { padding:38px 22px; }
+      .connector-logo { min-width:128px; height:64px; padding:0 14px; }
+      .footer-inner { flex-direction:column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior:auto; }
+      *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+      .reveal { opacity:1; transform:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid" aria-hidden="true"></div><div class="orb one" aria-hidden="true"></div><div class="orb two" aria-hidden="true"></div>
+  <nav><div class="wrap nav-inner"><div class="brand"><div class="brand-mark"><span>∿</span></div>Efe</div><div class="nav-links"><button class="nav-link" type="button" data-scroll-to="capacidades">Qué hace</button><button class="nav-link" type="button" data-scroll-to="casos">Casos reales</button><button class="nav-link" type="button" data-scroll-to="numeros">Calculadora</button><button class="button small" type="button" data-scroll-to="oferta">Ver oferta</button></div></div></nav>
+
+  <main>
+    <header class="hero"><div class="wrap hero-grid">
+      <div>
+        <div class="chatgpt-badge"><img src="https://api.iconify.design/logos:openai-icon.svg" alt="" aria-hidden="true">Construido alrededor de ChatGPT</div>
+        <div class="eyebrow"><span class="dot"></span>Tu central de operaciones con IA</div>
+        <h1>Convierte ChatGPT en el centro de todo tu trabajo.</h1>
+        <p>Ya conoces ChatGPT. Ahora úsalo como el cerebro de un agente con memoria, voz, automatizaciones y tus herramientas conectadas en una sola conversación.</p>
+        <div class="hero-actions"><button class="button" type="button" data-scroll-to="oferta" data-testid="hero-cta">Ver la oferta de 497 € <span>→</span></button><button class="button secondary" type="button" data-scroll-to="capacidades" data-testid="capabilities-cta">Ver lo que puede hacer</button><button class="button secondary" type="button" data-scroll-to="numeros" data-testid="numbers-cta">Calcular si me compensa</button></div>
+        <div class="micro"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 12 4 4L19 6" stroke-width="2"/></svg>ChatGPT pone el cerebro. Tu agente aporta contexto, método y ejecución.</div>
+      </div>
+      <div class="agent-shell reveal"><div class="agent">
+        <div class="agent-head"><div class="agent-id"><div class="avatar">∿</div><div><strong>Efe</strong><small>AGENTE OPERATIVO</small></div></div><div class="status">● ACTIVO</div></div>
+        <div class="chat">
+          <div class="msg user">Prepara un carrusel con las noticias de IA más relevantes, revísalo y déjame el enlace final.</div>
+          <div class="msg">Entendido. Buscaré las noticias, evitaré duplicados y prepararé el lote completo para tu aprobación.</div>
+          <div class="work"><div class="work-top"><span>Ejecutando proceso</span><span>4 / 5</span></div><div class="progress"><span></span></div><div class="chips"><span class="chip">INVESTIGACIÓN ✓</span><span class="chip">COPY ✓</span><span class="chip">IMÁGENES ✓</span><span class="chip">REVISIÓN…</span></div></div>
+          <div class="msg">He terminado. El carrusel está revisado y ordenado. Te envío una única entrega final.</div>
+        </div>
+      </div></div>
+    </div></header>
+
+    <section class="pain" id="problemas"><div class="wrap">
+      <div class="section-label">El problema no es la IA. Es la fragmentación.</div>
+      <h2>¿También estás cansado de trabajar para tus herramientas?</h2>
+      <p class="lead">Tu información repartida, cinco pestañas abiertas y asistentes que olvidan todo cuando empieza una conversación nueva.</p>
+      <div class="pain-grid">
+        <article class="card reveal"><span class="pain-number">01</span><div class="icon">↻</div><h3>Volver a explicarlo todo</h3><p>Tu IA pierde el contexto, no conoce tu negocio y cada sesión vuelve al punto de partida.</p></article>
+        <article class="card reveal"><span class="pain-number">02</span><div class="icon">⌘</div><h3>Una app para cada cosa</h3><p>Otra interfaz, otra curva de aprendizaje y otra suscripción para completar un único trabajo.</p></article>
+        <article class="card reveal"><span class="pain-number">03</span><div class="icon">…</div><h3>Respuestas que no ejecutan</h3><p>Te dan instrucciones, pero tú sigues copiando, pegando, coordinando y persiguiendo el resultado.</p></article>
+      </div>
+    </div></section>
+
+    <section id="capacidades" data-testid="capabilities-section"><div class="wrap">
+      <div class="section-label">ChatGPT como cerebro. Tu agente como sistema.</div>
+      <h2>Todo empieza y termina en una conversación.</h2>
+      <p class="lead">Hablas o escribes en un entorno que ya conoces. Tu agente conserva el contexto, coordina las herramientas y reúne el resultado sin obligarte a saltar entre plataformas.</p>
+      <div class="feature-grid">
+        <article class="card reveal"><div class="icon">◉</div><h3>Memoria que da continuidad</h3><p>Recuerda decisiones, preferencias y contexto útil para que no tengas que reconstruir tu negocio cada día.</p></article>
+        <article class="card reveal"><div class="icon">⌁</div><h3>Automatizaciones a tu medida</h3><p>Crea tareas recurrentes, revisa señales y ejecuta procesos con criterios y aprobaciones claras.</p></article>
+        <article class="card reveal"><div class="icon">✦</div><h3>Contenido de principio a fin</h3><p>Ideas, investigación, carruseles, imágenes, newsletters y entregables revisados en un único flujo.</p></article>
+        <article class="card reveal"><div class="icon">◇</div><h3>Webs y herramientas</h3><p>Convierte una idea en una landing, un prototipo o una aplicación lista para probar.</p></article>
+        <article class="card reveal"><div class="icon">≋</div><h3>Trabaja también por voz</h3><p>Habla con tu agente de forma natural, decide sobre la marcha y continúa después desde el chat.</p></article>
+        <article class="card reveal"><div class="icon">✓</div><h3>Tú conservas el control</h3><p>Las publicaciones, los gastos y las acciones sensibles esperan tu aprobación antes de ejecutarse.</p></article>
+      </div>
+    </div></section>
+
+    <section id="casos" data-testid="usecases-section"><div class="wrap">
+      <div class="section-label">Ahora baja el agente a tu día a día</div>
+      <h2>No compres “IA”. Dale trabajo real.</h2>
+      <p class="lead">Primero identifica qué te roba tiempo. Después decide qué debe preparar, coordinar o ejecutar tu agente y qué decisiones seguirán necesitando tu aprobación.</p>
+      <div class="usecase-tabs" aria-label="Perfiles"><span class="usecase-tab">Autónomos</span><span class="usecase-tab">Freelancers</span><span class="usecase-tab">Pymes</span><span class="usecase-tab">Agencias</span><span class="usecase-tab">E-commerce</span><span class="usecase-tab">Servicios profesionales</span></div>
+      <div class="usecase-grid">
+        <article class="usecase-group reveal"><h3><span>01</span>Ventas y leads</h3><ul class="task-list"><li>Clasificar y priorizar nuevos contactos</li><li>Preparar respuestas y seguimientos personalizados</li><li>Actualizar el CRM sin copiar datos a mano</li><li>Resumir el pipeline y detectar oportunidades paradas</li><li>Preparar propuestas y mensajes comerciales</li></ul></article>
+        <article class="usecase-group reveal"><h3><span>02</span>Correo y clientes</h3><ul class="task-list"><li>Ordenar la bandeja por urgencia y tema</li><li>Redactar respuestas con tu tono</li><li>Resolver preguntas frecuentes con contexto</li><li>Convertir conversaciones en tareas</li><li>Preparar resúmenes y próximos pasos</li></ul></article>
+        <article class="usecase-group reveal"><h3><span>03</span>Contenido y marca</h3><ul class="task-list"><li>Crear calendarios editoriales</li><li>Escribir posts siguiendo tu línea de marca</li><li>Producir carruseles, imágenes y newsletters</li><li>Adaptar una idea a varios canales</li><li>Programar publicaciones tras tu aprobación</li></ul></article>
+        <article class="usecase-group reveal"><h3><span>04</span>Administración</h3><ul class="task-list"><li>Ordenar facturas y justificantes</li><li>Preparar los datos para tu gestoría</li><li>Controlar cobros, vencimientos y documentación</li><li>Crear informes periódicos de ingresos y gastos</li><li>Recordar trámites y fechas importantes</li></ul></article>
+        <article class="usecase-group reveal"><h3><span>05</span>Operaciones</h3><ul class="task-list"><li>Coordinar tareas y responsables</li><li>Crear procedimientos a partir del trabajo real</li><li>Revisar procesos recurrentes y sus excepciones</li><li>Organizar archivos y entregables</li><li>Generar reportes diarios o semanales</li></ul></article>
+        <article class="usecase-group reveal"><h3><span>06</span>Negocio digital</h3><ul class="task-list"><li>Crear landings, prototipos y herramientas</li><li>Investigar mercado y competencia</li><li>Preparar fichas de producto y campañas</li><li>Reunir métricas de distintas plataformas</li><li>Detectar incidencias y preparar soluciones</li></ul></article>
+      </div>
+    </div></section>
+
+    <section class="offer-section" id="oferta" data-testid="offer-section"><div class="wrap">
+      <div class="offer-intro"><div class="section-label">Una oferta clara, sin letra pequeña</div><h2>Instala un agente propio. Empieza a recuperar tiempo desde el primer día.</h2><p class="lead">No estás comprando otra herramienta para aprender. Estás poniendo en marcha un sistema preparado para trabajar contigo desde ChatGPT.</p></div>
+      <div class="offer-grid">
+        <article class="price-panel reveal">
+          <span class="offer-badge">Oferta de lanzamiento</span>
+          <p class="price-kicker">Instalación y configuración inicial</p>
+          <div class="old-price">1.490 €</div>
+          <div class="price"><strong>497 €</strong><span>pago único</span></div>
+          <p class="price-copy">Tu agente, tu entorno y una primera configuración adaptada a tu marca, idioma y forma de trabajar.</p>
+          <div class="monthly"><span>Mantenimiento</span><div><strong>149 €</strong> <small>/ mes</small></div></div>
+          <button class="button purchase-button" type="button" data-testid="purchase-cta">Quiero instalar mi agente <span>→</span></button>
+          <p class="stripe-note" id="stripe-status" data-testid="stripe-status">El pago seguro se realizará mediante Stripe.</p>
+        </article>
+        <article class="maintenance-panel reveal">
+          <span class="offer-badge">Todo esto continúa cada mes</span>
+          <h3>Tu agente no vive en un espacio compartido.</h3>
+          <p>El mantenimiento mantiene tu entorno operativo, actualizado y acompañado para que puedas extraerle cada vez más valor.</p>
+          <ul class="included-list">
+            <li><div><strong>VPS propio y aislado.</strong><br>Un servidor para tu agente; no comparte entorno operativo ni datos con otros clientes.</div></li>
+            <li><div><strong>Actualizaciones del agente.</strong><br>Nuevas funciones y mejoras continuas incorporadas de forma controlada.</div></li>
+            <li><div><strong>Mejoras internas sin desmontar tu trabajo.</strong><br>Evolucionamos el sistema preservando tus configuraciones, automatizaciones y materiales.</div></li>
+            <li><div><strong>Plataforma privada en Whop.</strong><br>Acceso a la formación, recursos y novedades del producto.</div></li>
+            <li><div><strong>Comunidad de propietarios.</strong><br>Casos de uso, buenas prácticas e ideas para aprovechar mejor tu agente.</div></li>
+          </ul>
+        </article>
+      </div>
+    </div></section>
+
+    <section id="numeros" data-testid="numbers-section"><div class="wrap">
+      <div class="numbers-head">
+        <div><div class="section-label">¿Te sale rentable instalarlo?</div><h2>Haz tus números. Decide con tus datos.</h2></div>
+        <p class="lead">Mueve los controles y compara el coste del tiempo repetitivo con los 497 € de instalación y los 149 € mensuales. Si no te salen las cuentas, no deberías comprarlo.</p>
+      </div>
+      <div class="source-stats">
+        <div class="source-stat"><strong>2.385,60 €</strong><span>Salario bruto medio al mes</span><small>España · INE · dato 2024</small></div>
+        <div class="source-stat"><strong>3.278,01 €</strong><span>Coste laboral medio por trabajador y mes</span><small>España · INE · 1.er trimestre de 2026</small></div>
+        <div class="source-stat"><strong>40 h</strong><span>Jornada ordinaria máxima semanal de promedio anual</span><small>Estatuto de los Trabajadores · art. 34</small></div>
+      </div>
+      <div class="calculator reveal" aria-label="Calculadora orientativa del coste del trabajo repetitivo">
+        <div class="calc-inputs">
+          <div class="calc-field"><label for="hourly-cost">Coste empresa por hora</label><output id="hourly-value" for="hourly-cost">18,91 €/h</output><input id="hourly-cost" type="range" min="10" max="80" step="0.5" value="19" data-testid="hourly-cost"></div>
+          <div class="calc-field"><label for="daily-hours">Horas repetitivas al día</label><output id="daily-value" for="daily-hours">2,5 h</output><input id="daily-hours" type="range" min="0.5" max="8" step="0.5" value="2.5" data-testid="daily-hours"></div>
+          <div class="calc-field"><label for="workdays">Días de trabajo al año</label><output id="workdays-value" for="workdays">220 días</output><input id="workdays" type="range" min="180" max="250" step="5" value="220" data-testid="workdays"></div>
+        </div>
+        <div class="calc-results" aria-live="polite">
+          <div class="result-card main"><span>Coste anual de ese tiempo</span><strong id="annual-cost" data-testid="annual-cost">10.450 €</strong><small id="annual-formula">19 €/h × 2,5 h × 220 días</small></div>
+          <div class="result-card"><span>Inversión del primer año</span><strong id="first-year-investment">2.285 €</strong><small>497 € + 12 meses de mantenimiento</small></div>
+          <div class="result-card"><span>Diferencia teórica anual</span><strong id="annual-difference">8.165 €</strong><small>Si ese tiempo pudiera recuperarse por completo</small></div>
+          <div class="result-card"><span>Horas repetitivas al año</span><strong id="annual-hours">550 h</strong><small>Tiempo potencial para trabajo de más valor</small></div>
+          <div class="result-card"><span>Coste mensual de ese tiempo</span><strong id="monthly-cost">871 €</strong><small>Promedio orientativo</small></div>
+        </div>
+        <p class="calc-note">Escenario orientativo, no ahorro garantizado. Automatizar no elimina necesariamente todo ese coste: la herramienta sirve para valorar el orden de magnitud. El coste inicial de 18,91 €/h aproxima el dato mensual del INE sobre 40 h/semana.</p>
+      </div>
+      <p class="sources">Fuentes oficiales: <a href="https://www.ine.es/dyngs/Prensa/dsEPA2024.htm" target="_blank" rel="noopener">salario medio — INE</a> · <a href="https://www.ine.es/dyngs/Prensa/ETCL1T26.htm" target="_blank" rel="noopener">coste laboral — INE</a> · <a href="https://www.boe.es/buscar/act.php?id=BOE-A-2015-11430" target="_blank" rel="noopener">jornada — BOE</a>.</p>
+    </div></section>
+
+    <section id="conectores" data-testid="connectors-section"><div class="wrap"><div class="connect reveal">
+      <div class="connect-copy"><div class="section-label">Un clic para acercar tu ecosistema</div><h2>Las herramientas más potentes del mundo, alrededor de un solo agente.</h2><p class="lead">ChatGPT actúa como el centro. Conecta las apps compatibles que ya usas y permite que tu agente consulte información, prepare trabajo o ejecute acciones autorizadas sin sacarte de la conversación.</p></div>
+      <div class="connector-stage" aria-label="Ejemplos de herramientas conectables">
+        <div class="logo-track">
+          <div class="logo-set">
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:google-gmail.svg" alt="Gmail"><span>Gmail</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:google-drive.svg" alt="Google Drive"><span>Drive</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:dropbox.svg" alt="Dropbox"><span>Dropbox</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:slack-icon.svg" alt="Slack"><span>Slack</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:notion-icon.svg" alt="Notion"><span>Notion</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:github-icon.svg" alt="GitHub"><span>GitHub</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/simple-icons:canva.svg?color=%2300C4CC" alt="Canva"><span>Canva</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:hubspot.svg" alt="HubSpot"><span>HubSpot</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:figma.svg" alt="Figma"><span>Figma</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:trello.svg" alt="Trello"><span>Trello</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:airtable.svg" alt="Airtable"><span>Airtable</span></div>
+          </div>
+          <div class="logo-set" aria-hidden="true">
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:google-gmail.svg" alt=""><span>Gmail</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:google-drive.svg" alt=""><span>Drive</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:dropbox.svg" alt=""><span>Dropbox</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:slack-icon.svg" alt=""><span>Slack</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:notion-icon.svg" alt=""><span>Notion</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:github-icon.svg" alt=""><span>GitHub</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/simple-icons:canva.svg?color=%2300C4CC" alt=""><span>Canva</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:hubspot.svg" alt=""><span>HubSpot</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:figma.svg" alt=""><span>Figma</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:trello.svg" alt=""><span>Trello</span></div>
+            <div class="connector-logo"><img src="https://api.iconify.design/logos:airtable.svg" alt=""><span>Airtable</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="connector-note">La disponibilidad y las acciones dependen del plan de ChatGPT, de cada app, de la región y de los permisos concedidos.</p>
+    </div></div></section>
+
+    <section id="onboarding" data-testid="onboarding-section"><div class="wrap">
+      <div class="section-label">Después del pago, sabes exactamente qué ocurre</div>
+      <h2>Cuatro respuestas. Aproximadamente una hora. Tu agente en marcha.</h2>
+      <p class="lead">No te entregamos un manual para que lo montes tú. Con la información completa, preparamos tu entorno, personalizamos el punto de partida y te damos un camino claro para empezar.</p>
+      <div class="onboarding-grid">
+        <aside class="time-card reveal"><strong>1 h</strong><h3>Objetivo de puesta en marcha</h3><p>Aproximadamente una hora desde que recibimos correctamente las cuatro respuestas necesarias. Las conexiones externas que requieran autorización se completan contigo de forma segura.</p></aside>
+        <div class="journey">
+          <article class="journey-step reveal"><span>01</span><div><h3>Recibes un formulario muy corto</h3><p>Solo preguntamos lo imprescindible para crear la identidad inicial y preparar el acceso.</p><div class="questions"><div class="question">¿Qué nombre tendrá tu agente?</div><div class="question">¿A qué correo enviamos los códigos de verificación?</div><div class="question">¿Cuál es la web de tu marca o empresa?</div><div class="question">¿Trabajará en español o en inglés?</div></div></div></article>
+          <article class="journey-step reveal"><span>02</span><div><h3>Preparamos tu espacio privado</h3><p>Configuramos el VPS individual, el agente, el idioma y el contexto inicial de tu empresa.</p></div></article>
+          <article class="journey-step reveal"><span>03</span><div><h3>Recibes tu acceso y tu primer recorrido</h3><p>Entras en tu agente, compruebas que todo esté correcto y ves cómo empezar a pedirle trabajo real.</p></div></article>
+          <article class="journey-step reveal"><span>04</span><div><h3>No te quedas solo después</h3><p>Accedes a Whop, a la formación, a la comunidad y a nuevos casos de uso para seguir ampliando lo que haces con tu agente.</p></div></article>
+        </div>
+      </div>
+    </div></section>
+
+    <section class="cta" id="empezar" data-testid="final-section"><div class="wrap"><div class="cta-box reveal">
+      <div class="section-label">Oferta de lanzamiento</div><h2>Tu agente por 497 €.<br>En marcha en aproximadamente una hora.</h2><p>Incluye instalación, entorno privado y un camino claro para empezar. El mantenimiento de 149 €/mes sostiene tu VPS, las actualizaciones, la formación y la comunidad.</p><button class="button" type="button" data-testid="final-purchase-cta">Quiero instalar mi agente <span>→</span></button><p class="stripe-note" id="final-stripe-status" data-testid="final-stripe-status">Pago seguro mediante Stripe · apertura próxima</p>
+    </div></div></section>
+  </main>
+
+  <footer><div class="wrap footer-inner"><span>© 2026 Chat Bot Media</span><span>ChatGPT y las herramientas mostradas son servicios de terceros. Sus cuentas, planes, disponibilidad y permisos pueden variar.</span></div></footer>
+  <script>
+    document.querySelectorAll('[data-scroll-to]').forEach(function (control) {
+      control.addEventListener('click', function () {
+        var target = document.getElementById(control.getAttribute('data-scroll-to'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    (function () {
+      var hourly = document.getElementById('hourly-cost');
+      var daily = document.getElementById('daily-hours');
+      var days = document.getElementById('workdays');
+      var euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+      var decimal = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+      function updateCalculator() {
+        var hourlyValue = Number(hourly.value);
+        var dailyValue = Number(daily.value);
+        var daysValue = Number(days.value);
+        var hours = dailyValue * daysValue;
+        var annual = hourlyValue * hours;
+        var firstYearInvestment = 497 + (149 * 12);
+        var difference = annual - firstYearInvestment;
+        document.getElementById('hourly-value').textContent = decimal.format(hourlyValue) + ' €/h';
+        document.getElementById('daily-value').textContent = decimal.format(dailyValue) + ' h';
+        document.getElementById('workdays-value').textContent = daysValue + ' días';
+        document.getElementById('annual-cost').textContent = euro.format(annual);
+        document.getElementById('monthly-cost').textContent = euro.format(annual / 12);
+        document.getElementById('annual-hours').textContent = decimal.format(hours) + ' h';
+        document.getElementById('annual-difference').textContent = euro.format(difference);
+        document.getElementById('annual-formula').textContent = decimal.format(hourlyValue) + ' €/h × ' + decimal.format(dailyValue) + ' h × ' + daysValue + ' días';
+      }
+      [hourly, daily, days].forEach(function (input) { input.addEventListener('input', updateCalculator); });
+      updateCalculator();
+    }());
+    document.querySelectorAll('[data-testid="purchase-cta"], [data-testid="final-purchase-cta"]').forEach(function (control) {
+      control.addEventListener('click', function () {
+        var status = control.getAttribute('data-testid') === 'purchase-cta' ? document.getElementById('stripe-status') : document.getElementById('final-stripe-status');
+        status.textContent = 'El enlace de pago seguro con Stripe se activará aquí en la versión comercial. Esta demo no realiza ningún cobro.';
+        status.classList.add('is-active');
+      });
+    });
+  </script>
+</body>
+</html>
